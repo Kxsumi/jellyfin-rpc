@@ -4,6 +4,7 @@ import json
 import logging
 import re
 import signal
+import socket
 import sys
 import time
 import uuid
@@ -15,6 +16,18 @@ from logging import LogRecord, handlers
 from multiprocessing.queues import Queue
 from types import FrameType
 from typing import Any, cast
+
+_original_getaddrinfo = socket.getaddrinfo
+
+
+def _ipv4_first_getaddrinfo(host, port, family=0, *args, **kwargs):
+    results = _original_getaddrinfo(host, port, family, *args, **kwargs)
+    if family in (0, socket.AF_UNSPEC):
+        results.sort(key=lambda r: 0 if r[0] == socket.AF_INET else 1)
+    return results
+
+
+socket.getaddrinfo = _ipv4_first_getaddrinfo
 
 import requests
 from jellyfin_apiclient_python import JellyfinClient, api
